@@ -1,0 +1,4 @@
+# Develop tools
+.vscode/
+.idea/
+*.swp
