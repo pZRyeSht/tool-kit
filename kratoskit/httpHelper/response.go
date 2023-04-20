@@ -1,4 +1,4 @@
-package http
+package httpHelper
 
 import (
 	"google.golang.org/grpc/status"
