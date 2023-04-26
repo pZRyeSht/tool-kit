@@ -1,4 +1,4 @@
-module github.com/EscAlice/kratos-kit
+module github.com/EscAlice/tool-kit
 
 go 1.18
 
