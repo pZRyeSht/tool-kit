@@ -3,7 +3,7 @@ package zapHelper
 import (
 	"fmt"
 	"os"
-
+	
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
@@ -18,7 +18,7 @@ type ZapLogger struct {
 }
 
 // Logger 配置zap日志,将zap日志库引入
-func Logger() log.Logger {
+func Logger(alert bool, webhook string) log.Logger {
 	// 配置zap日志库的编码器
 	encoder := zapcore.EncoderConfig{
 		TimeKey:        "time",
@@ -35,6 +35,8 @@ func Logger() log.Logger {
 	return NewZapLogger(
 		encoder,
 		zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		alert,
+		webhook,
 		zap.AddStacktrace(
 			zap.NewAtomicLevelAt(zapcore.ErrorLevel)),
 		zap.AddCaller(),
@@ -56,22 +58,26 @@ func getLogWriter() zapcore.WriteSyncer {
 }
 
 // NewZapLogger return a zaplog logger.
-func NewZapLogger(encConf zapcore.EncoderConfig, level zap.AtomicLevel, opts ...zap.Option) *ZapLogger {
+func NewZapLogger(encConf zapcore.EncoderConfig, level zap.AtomicLevel, alert bool, webhook string, opts ...zap.Option) *ZapLogger {
 	// 日志切割
 	writeSyncer := getLogWriter()
-	coreList := [...]zapcore.Core{
-		// alert core
-		zapcore.NewCore(
-			NewAlertEncoder(encConf), // 推送编码器配置
-			zapcore.NewMultiWriteSyncer(),
-			zap.NewAtomicLevelAt(zapcore.ErrorLevel), // 日志推送级别（大于该级别即发送推送通知）
-		),
+	coreList := []zapcore.Core{
 		// stdout and file output core
 		zapcore.NewCore(
-			zapcore.NewJSONEncoder(encConf), // 编码器配置
+			zapcore.NewJSONEncoder(encConf),                                                       // 编码器配置
 			zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(writeSyncer)), // 打印到控制台和文件
-			level, // 日志打印级别（大于该级别即打印到指定终端或者文件）
+			level,                                                                                 // 日志打印级别（大于该级别即打印到指定终端或者文件）
 		),
+	}
+	if alert {
+		coreList = append(coreList,
+			// alert core
+			zapcore.NewCore(
+				NewAlertEncoder(encConf, webhook), // 推送编码器配置
+				zapcore.NewMultiWriteSyncer(),
+				zap.NewAtomicLevelAt(zapcore.ErrorLevel), // 日志推送级别（大于该级别即发送推送通知）
+			),
+		)
 	}
 	zapLogger := zap.New(zapcore.NewTee(coreList[:]...), opts...)
 	return &ZapLogger{log: zapLogger, Sync: zapLogger.Sync}

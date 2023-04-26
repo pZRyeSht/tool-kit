@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
+	
 	"github.com/go-kratos/kratos/v2/log"
 	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
@@ -20,13 +20,15 @@ const (
 	AlertWebHook = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx"
 )
 
-func NewAlertEncoder(encoderConf zapcore.EncoderConfig) zapcore.Encoder {
+func NewAlertEncoder(encoderConf zapcore.EncoderConfig, webhook string) zapcore.Encoder {
 	return &AlertEncoder{
-		Encoder: zapcore.NewJSONEncoder(encoderConf),
+		AlertWebhook: webhook,
+		Encoder:      zapcore.NewJSONEncoder(encoderConf),
 	}
 }
 
 type AlertEncoder struct {
+	AlertWebhook string
 	zapcore.Encoder
 }
 
@@ -50,16 +52,14 @@ func (a *AlertEncoder) alarmToWeCom(buf []byte) {
 			}
 		}
 	}
-	webHook := AlertWebHook
+	webHook := a.AlertWebhook
 	var logContent LogContent
 	err := json.Unmarshal(buf, &logContent)
 	if err != nil {
 		fmt.Println("Alert json Unmarshal content err：", err)
 	}
 	content := getContentStr(logContent, ipAddr)
-
 	data := fmt.Sprintf(`{"msgtype":"markdown","markdown":{"content":%q}}`, content)
-
 	resp, err := http.Post(webHook, "application/json", strings.NewReader(data))
 	if err != nil {
 		fmt.Println("Alert http post err:", err)
