@@ -1,3 +1,5 @@
 # a tool kit
 
-- [kratos http](kratoskit/http)
+- [kratos httpHelper](kratoskit/httpHelper)
+- [kratos zapHelper](kratoskit/zapHelper)
+- [gorm paginate](gormkit/paginate.go)
